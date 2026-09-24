@@ -86,7 +86,7 @@ const Slider = {
   }
 };
 
-/* Contact form: validation + Formspree submission */
+/* Contact form: validation + FormSubmit (delivers to the email in the form's action URL) */
 const Form = {
   rules: {
     name: v => v.trim().length >= 2 || 'Please enter your full name.',
@@ -117,16 +117,15 @@ const Form = {
     const fields = $$('input,select,textarea', this.form).filter(f => this.rules[f.name]);
     const valid = fields.map(f => this.check(f)).every(Boolean);
     if (!valid) { this.setStatus('Please fix the highlighted fields.', 'fail'); fields.find(f => f.closest('.field').classList.contains('bad')).focus(); return; }
-    const url = this.form.getAttribute('action');
-    if (url.includes('YOUR_FORMSPREE_ENDPOINT')) { this.setStatus('Form not connected yet: replace YOUR_FORMSPREE_ENDPOINT in index.html.', 'fail'); return; }
     const label = $('span', this.btn);
     this.btn.disabled = true; label.innerHTML = '<span class="spin"></span>Sending...'; this.setStatus('');
     try {
-      const res = await fetch(url, { method: 'POST', body: new FormData(this.form), headers: { Accept: 'application/json' } });
-      if (!res.ok) throw new Error(res.status);
+      const res = await fetch(this.form.action, { method: 'POST', body: new FormData(this.form), headers: { Accept: 'application/json' } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === 'false' || data.success === false) throw new Error(data.message || res.status);
       this.form.reset(); this.setStatus('Thank you! Your message has been sent. We will reply soon.', 'ok');
     } catch (err) {
-      this.setStatus('Sorry, your message could not be sent. Please try again or email us directly.', 'fail');
+      this.setStatus('Sorry, your message could not be sent. Please try again or email us at support@novassells.com.', 'fail');
     } finally {
       this.btn.disabled = false; label.textContent = 'Send Message';
     }
